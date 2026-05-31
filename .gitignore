@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+*.env.local
+*.env.*.local
+
+# Prisma
+prisma/migrations/*.sql.bak
+
+# pnpm
+.pnpm-store/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+*.swp
+app/
+.claude/

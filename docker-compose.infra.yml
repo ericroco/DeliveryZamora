@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: dz_postgres
+    environment:
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: dz_core
+      POSTGRES_USER: dz
+    ports:
+      - "5434:5432"
+    volumes:
+      - dz_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dz -d dz_core"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  timescaledb:
+    image: timescale/timescaledb-ha:pg16
+    container_name: dz_timescale
+    environment:
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: dz_tracking
+      POSTGRES_USER: dz
+    ports:
+      - "5435:5432"
+    volumes:
+      - dz_timescale_data:/home/postgres/pgdata/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dz -d dz_tracking"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dz_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - dz_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  dz_postgres_data:
+  dz_timescale_data:
+  dz_redis_data:

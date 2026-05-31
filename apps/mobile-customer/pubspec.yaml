@@ -1,0 +1,46 @@
+name: mobile_customer
+description: "DeliveryZamora — Customer mobile app"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # HTTP (ready for API integration)
+  dio: ^5.7.0
+
+  # Secure token storage
+  flutter_secure_storage: ^9.2.2
+
+  # Maps
+  google_maps_flutter: ^2.9.0
+
+  # Location & permissions
+  permission_handler: ^11.3.1
+  geolocator: ^13.0.2
+
+  # UI & fonts
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
