@@ -14,8 +14,14 @@ prisma/migrations/*.sql.bak
 .DS_Store
 Thumbs.db
 
+# Secrets
+apps/mobile-customer/ios/Flutter/Secrets.xcconfig
+apps/mobile-customer/android/local.properties
+
+# Claude local config
+.claude/
+
 # IDE
 .vscode/settings.json
 *.swp
 app/
-.claude/
