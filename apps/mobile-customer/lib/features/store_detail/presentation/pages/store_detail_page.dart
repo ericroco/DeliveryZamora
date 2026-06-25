@@ -15,19 +15,7 @@ class StoreDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final stores = ref.watch(storesProvider);
-    final store = stores.firstWhere(
-      (s) => s.id == storeId,
-      orElse: () => const Store(
-        id: '',
-        name: '',
-        category: '',
-        tag: '',
-        rating: 0,
-        deliveryTime: '',
-        distance: '',
-      ),
-    );
+    final store = ref.watch(storeByIdProvider(storeId));
     final products = ref.watch(productsByStoreProvider(storeId));
     final cartCount = ref.watch(cartItemCountProvider);
 
@@ -35,6 +23,12 @@ class StoreDetailPage extends ConsumerWidget {
     final grouped = <String, List<Product>>{};
     for (final p in products) {
       grouped.putIfAbsent(p.categoryLabel, () => []).add(p);
+    }
+
+    if (store == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Scaffold(
@@ -128,9 +122,9 @@ class _StoreHeader extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Store image or gradient fallback
-            if (store.imageUrl != null && store.imageUrl!.startsWith('assets/'))
-              Image.asset(
-                store.imageUrl!,
+            if (store.coverUrl != null || store.logoUrl != null)
+              Image.network(
+                (store.coverUrl ?? store.logoUrl)!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   color: store.isCasero ? AppColors.caseroBg : AppColors.cream,
@@ -176,35 +170,30 @@ class _StoreHeader extends StatelessWidget {
                         const Icon(Icons.star, size: 12, color: Colors.amber),
                         const SizedBox(width: 3),
                         Text(
-                          '${store.rating}',
+                          store.displayRating,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        const Icon(Icons.schedule,
-                            size: 12, color: Colors.white70),
-                        const SizedBox(width: 3),
-                        Text(
-                          store.deliveryTime,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
+                        if (store.address != null) ...[
+                          const SizedBox(width: 12),
+                          const Icon(Icons.location_on,
+                              size: 12, color: Colors.white70),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              store.address!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Icon(Icons.location_on,
-                            size: 12, color: Colors.white70),
-                        const SizedBox(width: 3),
-                        Text(
-                          store.distance,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
+                        ],
                       ],
                     ),
                   ],

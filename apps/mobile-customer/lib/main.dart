@@ -7,15 +7,15 @@ void main() {
   runApp(const ProviderScope(child: DeliveryZamoraApp()));
 }
 
-class DeliveryZamoraApp extends StatelessWidget {
+class DeliveryZamoraApp extends ConsumerWidget {
   const DeliveryZamoraApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'DeliveryZamora',
       theme: AppTheme.light,
-      routerConfig: appRouter,
+      routerConfig: buildRouter(ref),
       debugShowCheckedModeBanner: false,
     );
   }

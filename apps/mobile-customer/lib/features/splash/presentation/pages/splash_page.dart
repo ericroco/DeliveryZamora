@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_customer/core/auth/auth_provider.dart';
 import 'package:mobile_customer/core/constants/app_colors.dart';
 
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage>
+class _SplashPageState extends ConsumerState<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _fadeAnim;
@@ -23,14 +25,6 @@ class _SplashPageState extends State<SplashPage>
     );
     _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _ctrl.forward();
-    _navigate();
-  }
-
-  Future<void> _navigate() async {
-    await Future<void>.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    // TODO: check auth state — redirect to /onboarding or /home
-    context.go('/onboarding');
   }
 
   @override
@@ -41,6 +35,16 @@ class _SplashPageState extends State<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authStateProvider, (_, next) {
+      if (next.isLoading) return;
+      if (!mounted) return;
+      next.when(
+        data: (user) => context.go(user != null ? '/' : '/onboarding'),
+        error: (_, __) => context.go('/onboarding'),
+        loading: () {},
+      );
+    });
+
     return Scaffold(
       backgroundColor: AppColors.accent,
       body: FadeTransition(

@@ -14,7 +14,8 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final stores = ref.watch(filteredStoresProvider);
+    final catalogAsync = ref.watch(catalogHomeProvider);
+    final filteredStores = ref.watch(filteredStoresProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -25,33 +26,75 @@ class HomePage extends ConsumerWidget {
           children: [
             const _HomeHeader(),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    const _CategorySection(),
-                    const SizedBox(height: 12),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: PromoBanner(),
-                    ),
-                    const SizedBox(height: 20),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: _SectionHeader(title: 'Lugares cerca de ti'),
-                    ),
-                    const SizedBox(height: 10),
-                    ...stores.asMap().entries.map(
-                      (e) => _AnimatedStoreCard(
-                        key: ValueKey(e.value.id),
-                        index: e.key,
-                        store: e.value,
-                        onTap: () => context.push('/store/${e.value.id}'),
+              child: catalogAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.wifi_off, size: 48, color: AppColors.muted),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Sin conexión',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.text,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () => ref.refresh(catalogHomeProvider),
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                ),
+                data: (catalog) => SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      _CategorySection(categories: catalog.categories),
+                      const SizedBox(height: 12),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: PromoBanner(),
+                      ),
+                      const SizedBox(height: 20),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: _SectionHeader(title: 'Lugares cerca de ti'),
+                      ),
+                      const SizedBox(height: 10),
+                      if (filteredStores.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 32,
+                          ),
+                          child: Center(
+                            child: Text(
+                              'No hay tiendas en esta categoría',
+                              style: TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...filteredStores.asMap().entries.map(
+                          (e) => _AnimatedStoreCard(
+                            key: ValueKey(e.value.id),
+                            index: e.key,
+                            store: e.value,
+                            onTap: () => context.push('/store/${e.value.id}'),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -76,10 +119,10 @@ class _HomeHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
+              const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'ENTREGANDO EN',
                     style: TextStyle(
                       fontSize: 10,
@@ -88,9 +131,9 @@ class _HomeHeader extends StatelessWidget {
                       letterSpacing: 0.8,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   Row(
-                    children: const [
+                    children: [
                       Icon(Icons.location_on, size: 14, color: AppColors.accent),
                       SizedBox(width: 2),
                       Text(
@@ -138,7 +181,7 @@ class _HomeHeader extends StatelessWidget {
             child: Semantics(
               button: true,
               label: 'Buscar comida, farmacias, mercados',
-              child: const Row(
+              child: Row(
                 children: [
                   Icon(Icons.search, size: 18, color: AppColors.muted),
                   SizedBox(width: 8),
@@ -157,15 +200,17 @@ class _HomeHeader extends StatelessWidget {
 }
 
 class _CategorySection extends ConsumerWidget {
-  const _CategorySection();
+  const _CategorySection({required this.categories});
 
-  static const _categories = [
-    (id: 'Restaurantes', label: 'Restaurantes', icon: Icons.restaurant_outlined),
-    (id: 'Caseros', label: 'Caseros', icon: Icons.favorite_border),
-    (id: 'Farmacias', label: 'Farmacias', icon: Icons.local_pharmacy_outlined),
-    (id: 'Mercados', label: 'Mercados', icon: Icons.shopping_bag_outlined),
-    (id: 'Licores', label: 'Licores', icon: Icons.wine_bar_outlined),
-  ];
+  final List<StoreCategory> categories;
+
+  static const _slugIcons = <String, IconData>{
+    'restaurantes': Icons.restaurant_outlined,
+    'caseros': Icons.favorite_border,
+    'farmacias': Icons.local_pharmacy_outlined,
+    'mercados': Icons.shopping_bag_outlined,
+    'licores': Icons.wine_bar_outlined,
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -176,15 +221,16 @@ class _CategorySection extends ConsumerWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _categories.length,
+        itemCount: categories.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          final cat = _categories[i];
+          final cat = categories[i];
+          final icon = _slugIcons[cat.slug] ?? Icons.storefront_outlined;
           return CategoryPill(
-            label: cat.label,
-            icon: cat.icon,
+            label: cat.name,
+            icon: icon,
             isSelected: selected == cat.id,
-            isCasero: cat.id == 'Caseros',
+            isCasero: cat.slug == 'caseros',
             onTap: () {
               final notifier = ref.read(selectedCategoryProvider.notifier);
               notifier.state = notifier.state == cat.id ? null : cat.id;
@@ -203,19 +249,19 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          title,
-          style: const TextStyle(
+          'Lugares cerca de ti',
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w900,
             color: AppColors.text,
           ),
         ),
         Row(
-          children: const [
+          children: [
             Text(
               'Ver todo',
               style: TextStyle(
@@ -231,8 +277,6 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-
-// ── Animated store card entry (stagger + press scale) ──────────────────────
 
 class _AnimatedStoreCard extends StatefulWidget {
   const _AnimatedStoreCard({

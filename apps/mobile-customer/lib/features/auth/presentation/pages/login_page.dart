@@ -1,37 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_customer/core/auth/auth_provider.dart';
 import 'package:mobile_customer/core/constants/app_colors.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _phoneCtrl = TextEditingController();
-  bool _loading = false;
+  final _passwordCtrl = TextEditingController();
+  bool _obscure = true;
+  bool _isRegister = false;
 
   @override
   void dispose() {
     _phoneCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _sendOtp() async {
-    if (_phoneCtrl.text.length < 9) return;
-    setState(() => _loading = true);
-    // TODO: call auth service → POST /auth/send-otp
-    await Future<void>.delayed(const Duration(seconds: 1));
+  bool get _canSubmit =>
+      _phoneCtrl.text.length >= 9 && _passwordCtrl.text.length >= 6;
+
+  Future<void> _submit() async {
+    final phone = '+593${_phoneCtrl.text.trim()}';
+    final password = _passwordCtrl.text;
+    final notifier = ref.read(authStateProvider.notifier);
+
+    if (_isRegister) {
+      await notifier.register(phone, password);
+    } else {
+      await notifier.login(phone, password);
+    }
+
+    final authState = ref.read(authStateProvider);
     if (!mounted) return;
-    setState(() => _loading = false);
-    context.push('/login/otp', extra: _phoneCtrl.text);
+
+    authState.when(
+      data: (user) {
+        if (user != null) context.go('/');
+      },
+      error: (e, _) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_friendlyError(e.toString())),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      },
+      loading: () {},
+    );
+  }
+
+  String _friendlyError(String raw) {
+    if (raw.contains('401') || raw.contains('Invalid credentials')) {
+      return 'Número o contraseña incorrectos';
+    }
+    if (raw.contains('409') || raw.contains('already registered')) {
+      return 'Este número ya está registrado';
+    }
+    if (raw.contains('SocketException') || raw.contains('connection')) {
+      return 'Sin conexión al servidor';
+    }
+    return 'Algo salió mal. Intenta de nuevo.';
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final loading = authState.isLoading;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -55,9 +99,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Ingresa tu\nnúmero de celular',
-                style: TextStyle(
+              Text(
+                _isRegister ? 'Crear cuenta' : 'Bienvenido\nde vuelta',
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   color: AppColors.text,
@@ -66,7 +110,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Te enviamos un código por WhatsApp para verificar tu cuenta.',
+                'Ingresa tu número y contraseña para continuar.',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.muted,
@@ -74,6 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 32),
+              // Phone field
               Container(
                 decoration: BoxDecoration(
                   color: AppColors.card,
@@ -105,7 +150,6 @@ class _LoginPageState extends State<LoginPage> {
                       child: TextField(
                         controller: _phoneCtrl,
                         keyboardType: TextInputType.phone,
-                        autofillHints: const [AutofillHints.telephoneNumberNational],
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(10),
@@ -115,7 +159,8 @@ class _LoginPageState extends State<LoginPage> {
                           hintText: '09XXXXXXXX',
                           hintStyle: TextStyle(color: AppColors.muted),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 12),
                         ),
                         style: const TextStyle(
                           fontSize: 16,
@@ -127,13 +172,47 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              // Password field
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.inputBorder),
+                ),
+                child: TextField(
+                  controller: _passwordCtrl,
+                  obscureText: _obscure,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Contraseña',
+                    hintStyle: const TextStyle(color: AppColors.muted),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure ? Icons.visibility_off : Icons.visibility,
+                        color: AppColors.muted,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: FilledButton(
-                  onPressed:
-                      _phoneCtrl.text.length >= 9 && !_loading ? _sendOtp : null,
+                  onPressed: _canSubmit && !loading ? _submit : null,
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     disabledBackgroundColor: AppColors.caseroBorder,
@@ -141,7 +220,7 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: _loading
+                  child: loading
                       ? const SizedBox(
                           width: 20,
                           height: 20,
@@ -150,13 +229,29 @@ class _LoginPageState extends State<LoginPage> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Enviar código',
-                          style: TextStyle(
+                      : Text(
+                          _isRegister ? 'Crear cuenta' : 'Ingresar',
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: () => setState(() => _isRegister = !_isRegister),
+                  child: Text(
+                    _isRegister
+                        ? '¿Ya tienes cuenta? Ingresar'
+                        : '¿No tienes cuenta? Registrarte',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
               ),
               const Spacer(),
