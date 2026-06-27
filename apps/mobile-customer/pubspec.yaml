@@ -24,7 +24,6 @@ dependencies:
   flutter_secure_storage: ^9.2.2
 
   # Maps
-  google_maps_flutter: ^2.9.0
 
   # Location & permissions
   permission_handler: ^11.3.1
@@ -33,6 +32,10 @@ dependencies:
   # UI & fonts
   google_fonts: ^6.2.1
   cached_network_image: ^3.4.1
+  uuid: ^4.5.3
+  maplibre_gl: ^0.26.2
+  google_maps_flutter: ^2.17.1
+  google_maps_flutter_web: ^0.6.2+3
 
 dev_dependencies:
   flutter_test:

@@ -13,6 +13,11 @@ import 'package:mobile_customer/features/orders/presentation/pages/orders_page.d
 import 'package:mobile_customer/features/profile/presentation/pages/profile_page.dart';
 import 'package:mobile_customer/features/splash/presentation/pages/splash_page.dart';
 import 'package:mobile_customer/features/store_detail/presentation/pages/store_detail_page.dart';
+import 'package:mobile_customer/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:mobile_customer/features/addresses/presentation/screens/addresses_screen.dart';
+import 'package:mobile_customer/features/addresses/presentation/screens/add_edit_address_screen.dart';
+import 'package:mobile_customer/features/profile/presentation/screens/edit_profile_screen.dart';
+import 'package:mobile_customer/features/addresses/domain/entities/address_entity.dart';
 
 final _publicRoutes = {'/splash', '/onboarding', '/login'};
 
@@ -89,6 +94,25 @@ GoRouter buildRouter(WidgetRef ref) {
       GoRoute(
         path: '/profile',
         builder: (_, __) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        pageBuilder: (_, state) => _slidePage(state, const EditProfileScreen()),
+      ),
+      GoRoute(
+        path: '/notifications',
+        pageBuilder: (_, state) => _slidePage(state, const NotificationsScreen()),
+      ),
+      GoRoute(
+        path: '/addresses',
+        pageBuilder: (_, state) => _slidePage(state, const AddressesScreen()),
+      ),
+      GoRoute(
+        path: '/addresses/add',
+        pageBuilder: (_, state) {
+          final address = state.extra as AddressEntity?;
+          return _slidePage(state, AddEditAddressScreen(addressToEdit: address));
+        },
       ),
     ],
   );

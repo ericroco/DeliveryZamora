@@ -28,7 +28,7 @@ class ProfilePage extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.location_on_outlined,
                   label: 'Mis direcciones',
-                  onTap: () {},
+                  onTap: () => context.push('/addresses'),
                 ),
                 _MenuItem(
                   icon: Icons.credit_card_outlined,
@@ -48,7 +48,7 @@ class ProfilePage extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.notifications_outlined,
                   label: 'Notificaciones',
-                  onTap: () {},
+                  onTap: () => context.push('/notifications'),
                 ),
                 _MenuItem(
                   icon: Icons.help_outline,
@@ -153,7 +153,7 @@ class _ProfileHeader extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => context.push('/profile/edit'),
             icon: const Icon(Icons.edit_outlined, size: 18),
             color: AppColors.muted,
           ),

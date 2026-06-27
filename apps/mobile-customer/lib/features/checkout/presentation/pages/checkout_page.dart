@@ -174,7 +174,7 @@ class _AddressMapCardState extends State<_AddressMapCard> {
   GoogleMapController? _ctrl;
 
   @override
-  void didUpdateWidget(_AddressMapCard old) {
+  void didUpdateWidget(covariant _AddressMapCard old) {
     super.didUpdateWidget(old);
     if (old.latLng != widget.latLng) {
       _ctrl?.animateCamera(CameraUpdate.newLatLng(widget.latLng));
@@ -195,14 +195,15 @@ class _AddressMapCardState extends State<_AddressMapCard> {
           children: [
             SizedBox(
               height: 140,
-              child: Stack(
-                children: [
-                  GoogleMap(
-                    onMapCreated: (c) => _ctrl = c,
+                child: IgnorePointer(
+                  child: GoogleMap(
                     initialCameraPosition: CameraPosition(
                       target: widget.latLng,
-                      zoom: 15.5,
+                      zoom: 15,
                     ),
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    compassEnabled: false,
                     markers: {
                       Marker(
                         markerId: const MarkerId('delivery'),
@@ -212,21 +213,9 @@ class _AddressMapCardState extends State<_AddressMapCard> {
                         ),
                       ),
                     },
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
-                    mapToolbarEnabled: false,
-                    compassEnabled: false,
-                    scrollGesturesEnabled: false,
-                    zoomGesturesEnabled: false,
-                    tiltGesturesEnabled: false,
-                    rotateGesturesEnabled: false,
+                    onMapCreated: (c) => _ctrl = c,
                   ),
-                  // Tap overlay
-                  Positioned.fill(
-                    child: Container(color: Colors.transparent),
-                  ),
-                ],
-              ),
+                ),
             ),
             Container(
               color: AppColors.card,
@@ -322,13 +311,12 @@ class _AddressPickerPageState extends State<_AddressPickerPage> {
       body: Column(
         children: [
           Expanded(
-            flex: 3,
             child: GoogleMap(
-              onMapCreated: (c) => _ctrl = c,
               initialCameraPosition: CameraPosition(
-                target: widget.initial,
-                zoom: 14.5,
+                target: _selected,
+                zoom: 15.5,
               ),
+              zoomControlsEnabled: false,
               markers: {
                 Marker(
                   markerId: const MarkerId('selected'),
@@ -336,11 +324,12 @@ class _AddressPickerPageState extends State<_AddressPickerPage> {
                   icon: BitmapDescriptor.defaultMarkerWithHue(
                     BitmapDescriptor.hueOrange,
                   ),
-                ),
+                )
               },
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
+              onMapCreated: (c) => _ctrl = c,
+              onCameraMove: (pos) {
+                _selected = pos.target;
+              },
             ),
           ),
           Expanded(
