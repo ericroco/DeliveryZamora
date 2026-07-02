@@ -8,6 +8,8 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateClientProfileDto } from './dto/create-client-profile.dto';
 import { UpdateClientProfileDto } from './dto/update-client-profile.dto';
+import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
 
 @Injectable()
 export class ClientsService {
@@ -43,6 +45,96 @@ export class ClientsService {
       data: { name: dto.name, avatarUrl: dto.avatarUrl },
     });
   }
+
+  // ─── Addresses ───────────────────────────────────────────────────────────────
+
+  async getMyAddresses(userId: string) {
+    return this.prisma.clientAddress.findMany({
+      where: { userId },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async addAddress(userId: string, dto: CreateAddressDto) {
+    return this.prisma.$transaction(async (tx) => {
+      // First address is always default; otherwise respect dto.isDefault
+      const count = await tx.clientAddress.count({ where: { userId } });
+      const shouldBeDefault = dto.isDefault || count === 0;
+
+      if (shouldBeDefault) {
+        await tx.clientAddress.updateMany({
+          where: { userId, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+
+      return tx.clientAddress.create({
+        data: {
+          userId,
+          label: dto.label,
+          address: dto.address,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          isDefault: shouldBeDefault,
+        },
+      });
+    });
+  }
+
+  async updateAddress(userId: string, addressId: string, dto: UpdateAddressDto) {
+    const address = await this.prisma.clientAddress.findUnique({ where: { id: addressId } });
+    if (!address || address.userId !== userId) {
+      throw new NotFoundException('Address not found');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (dto.isDefault) {
+        await tx.clientAddress.updateMany({
+          where: { userId, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+      return tx.clientAddress.update({
+        where: { id: addressId },
+        data: {
+          label: dto.label,
+          address: dto.address,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          isDefault: dto.isDefault,
+        },
+      });
+    });
+  }
+
+  async deleteAddress(userId: string, addressId: string) {
+    const address = await this.prisma.clientAddress.findUnique({ where: { id: addressId } });
+    if (!address || address.userId !== userId) {
+      throw new NotFoundException('Address not found');
+    }
+    await this.prisma.clientAddress.delete({ where: { id: addressId } });
+    return { message: 'Address deleted' };
+  }
+
+  async setDefaultAddress(userId: string, addressId: string) {
+    const address = await this.prisma.clientAddress.findUnique({ where: { id: addressId } });
+    if (!address || address.userId !== userId) {
+      throw new NotFoundException('Address not found');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.clientAddress.updateMany({
+        where: { userId, isDefault: true },
+        data: { isDefault: false },
+      });
+      return tx.clientAddress.update({
+        where: { id: addressId },
+        data: { isDefault: true },
+      });
+    });
+  }
+
+  // ─── Admin ────────────────────────────────────────────────────────────────────
 
   async findAll(page: number, limit: number) {
     const skip = (page - 1) * limit;

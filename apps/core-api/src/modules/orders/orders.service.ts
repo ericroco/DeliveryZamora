@@ -82,6 +82,8 @@ export class OrdersService {
     });
 
     const originalAmount = itemsData.reduce((sum, i) => sum + i.subtotal, 0);
+    const deliveryFee = Number(store.deliveryFeeRate ?? 0);
+    const serviceFee = 0.20; // BR-07: tarifa de servicio fija al cliente ($0.15–$0.25)
 
     // Validate promo before entering transaction (no side effects yet)
     let promoResult: { promotionId: string; discountAmount: number; finalAmount: number } | null = null;
@@ -90,7 +92,7 @@ export class OrdersService {
     }
 
     const discountAmount = promoResult?.discountAmount ?? 0;
-    const totalAmount = originalAmount - discountAmount;
+    const totalAmount = originalAmount + deliveryFee + serviceFee - discountAmount;
 
     // Create order + consume promo atomically to prevent over-usage race condition
     const order = await this.prisma.$transaction(async (tx) => {
@@ -102,9 +104,19 @@ export class OrdersService {
           notes: dto.notes,
           originalAmount,
           discountAmount,
+          deliveryFee,
+          serviceFee,
           totalAmount,
           promoCode: dto.promoCode,
-          items: { create: itemsData },
+          items: {
+            create: itemsData.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              subtotal: item.subtotal,
+              notes: dto.items.find((i) => i.productId === item.productId)?.notes,
+            })),
+          },
         },
         include: {
           items: { include: { product: { select: { id: true, name: true } } } },

@@ -21,6 +21,11 @@ export class OrderItemDto {
   @IsInt()
   @IsPositive()
   quantity: number;
+
+  @ApiPropertyOptional({ example: 'Sin cebolla por favor' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class CreateOrderDto {

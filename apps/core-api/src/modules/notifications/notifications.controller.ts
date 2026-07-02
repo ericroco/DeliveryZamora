@@ -8,10 +8,11 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { QueryNotificationsDto } from './dto/query-notifications.dto';
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -22,14 +23,16 @@ export class NotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'Get my notifications' })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 20 })
   findMine(
     @CurrentUser() user: { id: string },
-    @Query('page') page = '1',
-    @Query('limit') limit = '20',
+    @Query() query: QueryNotificationsDto,
   ) {
-    return this.notificationsService.findMyNotifications(user.id, Number(page), Number(limit));
+    return this.notificationsService.findMyNotifications(
+      user.id,
+      query.page ?? 1,
+      query.limit ?? 20,
+      query.type,
+    );
   }
 
   @Patch('read-all')

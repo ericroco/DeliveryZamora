@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { OrderStatus } from '@prisma/client';
+import { NotificationType, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
 interface NotificationPayload {
   userId: string;
   orderId?: string;
+  type: NotificationType;
   title: string;
   body: string;
 }
@@ -38,13 +39,14 @@ export class NotificationsService {
 
     const clientMsg = STATUS_MESSAGES[newStatus];
     if (clientMsg) {
-      payloads.push({ userId: clientId, orderId, ...clientMsg });
+      payloads.push({ userId: clientId, orderId, type: 'ORDER_UPDATE', ...clientMsg });
     }
 
     if (newStatus === OrderStatus.PENDING) {
       payloads.push({
         userId: merchantUserId,
         orderId,
+        type: 'ORDER_UPDATE',
         title: 'Nuevo pedido',
         body: 'Tienes un nuevo pedido esperando confirmación.',
       });
@@ -53,9 +55,14 @@ export class NotificationsService {
     await this.createMany(payloads);
   }
 
-  async findMyNotifications(userId: string, page: number, limit: number) {
+  async findMyNotifications(
+    userId: string,
+    page: number,
+    limit: number,
+    type?: NotificationType,
+  ) {
     const skip = (page - 1) * limit;
-    const where = { userId };
+    const where = { userId, ...(type ? { type } : {}) };
 
     const [notifications, total, unreadCount] = await Promise.all([
       this.prisma.notification.findMany({

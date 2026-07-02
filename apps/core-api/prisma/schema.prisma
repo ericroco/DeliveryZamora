@@ -35,6 +35,13 @@ enum DiscountType {
   FIXED
 }
 
+enum NotificationType {
+  ORDER_UPDATE
+  PROMO
+  DEBT_ALERT
+  SYSTEM
+}
+
 model User {
   id           String     @id @default(uuid())
   phone        String     @unique
@@ -55,6 +62,7 @@ model User {
   driverRatings      DriverRating[]       @relation("ClientDriverRatings")
   promoUsages        PromoUsage[]
   orderStatusChanges OrderStatusHistory[] @relation("OrderStatusChangedBy")
+  savedAddresses     ClientAddress[]
 
   @@map("users")
 }
@@ -64,10 +72,27 @@ model ClientProfile {
   name      String
   avatarUrl String?  @map("avatar_url")
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
+}
+
+model ClientAddress {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  label     String
+  address   String
+  latitude  Float?
+  longitude Float?
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("client_addresses")
 }
 
 model MerchantProfile {
@@ -108,23 +133,24 @@ model Category {
 }
 
 model Store {
-  id           String   @id @default(uuid())
-  merchantId   String   @map("merchant_id")
-  categoryId   String   @map("category_id")
-  name         String
-  description  String?
-  address      String
-  phone        String?
-  logoUrl      String?  @map("logo_url")
-  coverUrl     String?  @map("cover_url")
-  openingHours Json?    @map("opening_hours")
-  latitude     Float?
-  longitude    Float?
-  ratingAvg    Decimal  @default(0) @map("rating_avg") @db.Decimal(3, 2)
-  ratingCount  Int      @default(0) @map("rating_count")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  merchantId      String   @map("merchant_id")
+  categoryId      String   @map("category_id")
+  name            String
+  description     String?
+  address         String
+  phone           String?
+  logoUrl         String?  @map("logo_url")
+  coverUrl        String?  @map("cover_url")
+  openingHours    Json?    @map("opening_hours")
+  latitude        Float?
+  longitude       Float?
+  ratingAvg       Decimal  @default(0) @map("rating_avg") @db.Decimal(3, 2)
+  ratingCount     Int      @default(0) @map("rating_count")
+  deliveryFeeRate Decimal  @default(0) @map("delivery_fee_rate") @db.Decimal(5, 2)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   merchant          MerchantProfile   @relation(fields: [merchantId], references: [userId])
   category          Category          @relation(fields: [categoryId], references: [id])
@@ -183,8 +209,9 @@ model DriverProfile {
   ratingCount Int      @default(0) @map("rating_count")
   isAvailable Boolean  @default(false) @map("is_available")
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders        Order[]
   driverRatings DriverRating[]
 
@@ -211,6 +238,8 @@ model Order {
   status            OrderStatus @default(PENDING)
   originalAmount    Decimal?    @map("original_amount") @db.Decimal(10, 2)
   discountAmount    Decimal     @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  deliveryFee       Decimal     @default(0) @map("delivery_fee") @db.Decimal(10, 2)
+  serviceFee        Decimal     @default(0) @map("service_fee") @db.Decimal(10, 2)
   totalAmount       Decimal     @map("total_amount") @db.Decimal(10, 2)
   promoCode         String?     @map("promo_code")
   deliveryAddress   String      @map("delivery_address")
@@ -243,6 +272,7 @@ model OrderItem {
   quantity  Int
   unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
   subtotal  Decimal @db.Decimal(10, 2)
+  notes     String?
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
@@ -251,13 +281,14 @@ model OrderItem {
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  orderId   String?  @map("order_id")
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  orderId   String?          @map("order_id")
   title     String
   body      String
-  isRead    Boolean  @default(false) @map("is_read")
-  createdAt DateTime @default(now()) @map("created_at")
+  type      NotificationType @default(SYSTEM)
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)

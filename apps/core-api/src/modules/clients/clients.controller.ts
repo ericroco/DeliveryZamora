@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -14,6 +15,8 @@ import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { ClientsService } from './clients.service';
 import { CreateClientProfileDto } from './dto/create-client-profile.dto';
 import { UpdateClientProfileDto } from './dto/update-client-profile.dto';
+import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -25,6 +28,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @ApiBearerAuth()
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
+
+  // ─── Profile ────────────────────────────────────────────────────────────────
 
   @Post('profile')
   @Roles('CLIENT')
@@ -52,6 +57,60 @@ export class ClientsController {
   ) {
     return this.clientsService.updateMyProfile(user.id, dto);
   }
+
+  // ─── Saved Addresses ────────────────────────────────────────────────────────
+
+  @Get('me/addresses')
+  @Roles('CLIENT')
+  @ApiOperation({ summary: 'List my saved delivery addresses' })
+  getMyAddresses(@CurrentUser() user: { id: string }) {
+    return this.clientsService.getMyAddresses(user.id);
+  }
+
+  @Post('me/addresses')
+  @Roles('CLIENT')
+  @ApiOperation({ summary: 'Save a new delivery address' })
+  addAddress(
+    @CurrentUser() user: { id: string },
+    @Body() dto: CreateAddressDto,
+  ) {
+    return this.clientsService.addAddress(user.id, dto);
+  }
+
+  @Patch('me/addresses/:addressId')
+  @Roles('CLIENT')
+  @ApiOperation({ summary: 'Update a saved address' })
+  updateAddress(
+    @CurrentUser() user: { id: string },
+    @Param('addressId') addressId: string,
+    @Body() dto: UpdateAddressDto,
+  ) {
+    return this.clientsService.updateAddress(user.id, addressId, dto);
+  }
+
+  @Patch('me/addresses/:addressId/default')
+  @Roles('CLIENT')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set address as default delivery address' })
+  setDefaultAddress(
+    @CurrentUser() user: { id: string },
+    @Param('addressId') addressId: string,
+  ) {
+    return this.clientsService.setDefaultAddress(user.id, addressId);
+  }
+
+  @Delete('me/addresses/:addressId')
+  @Roles('CLIENT')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a saved address' })
+  deleteAddress(
+    @CurrentUser() user: { id: string },
+    @Param('addressId') addressId: string,
+  ) {
+    return this.clientsService.deleteAddress(user.id, addressId);
+  }
+
+  // ─── Admin ──────────────────────────────────────────────────────────────────
 
   @Get()
   @Roles('ADMIN')
