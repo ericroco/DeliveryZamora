@@ -10,6 +10,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { UpdateDriverLocationDto } from './dto/update-driver-location.dto';
 
 type Requester = { id: string; role: Role };
 
@@ -199,13 +200,36 @@ export class OrdersService {
         store: { select: { id: true, name: true, merchantId: true } },
         items: { include: { product: { select: { id: true, name: true } } } },
         client: { select: { id: true } },
-        driver: { select: { userId: true, name: true } },
+        driver: { select: { userId: true, name: true, vehicleType: true, plate: true } },
       },
     });
     if (!order) throw new NotFoundException('Order not found');
 
     this.assertAccess(order, requester);
     return order;
+  }
+
+  async updateDriverLocation(id: string, dto: UpdateDriverLocationDto, requester: Requester) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: { driverId: true, status: true, clientId: true, store: { select: { merchantId: true } } },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+
+    // Only the assigned driver (or admin) can update location
+    if (requester.role !== 'ADMIN' && order.driverId !== requester.id) {
+      throw new ForbiddenException('Only the assigned driver can update location');
+    }
+
+    return this.prisma.order.update({
+      where: { id },
+      data: {
+        driverLat: dto.lat,
+        driverLng: dto.lng,
+        locationUpdatedAt: new Date(),
+      },
+      select: { id: true, driverLat: true, driverLng: true, locationUpdatedAt: true },
+    });
   }
 
   async updateStatus(id: string, dto: UpdateOrderStatusDto, requester: Requester) {

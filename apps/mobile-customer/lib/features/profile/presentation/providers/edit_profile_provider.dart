@@ -49,7 +49,7 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileEntity>> {
     try {
       final updatedProfile = await _editProfile(name, email, avatarUrl);
       state = AsyncValue.data(updatedProfile);
-    } catch (e, st) {
+    } catch (e) {
       state = previousState; // Revert on failure
       // Optionally handle error logic
     }

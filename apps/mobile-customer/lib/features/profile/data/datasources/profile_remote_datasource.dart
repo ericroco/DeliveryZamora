@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../models/profile_model.dart';
 
 abstract class ProfileRemoteDataSource {

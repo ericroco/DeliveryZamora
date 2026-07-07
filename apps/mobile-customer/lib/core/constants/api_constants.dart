@@ -27,4 +27,8 @@ class ApiEndpoints {
   // Addresses
   static const String addresses = '/clients/addresses';
   static String addressAction(String id) => '/clients/addresses/$id';
+
+  // Orders
+  static const String orders = '/orders';
+  static String orderById(String id) => '/orders/$id';
 }

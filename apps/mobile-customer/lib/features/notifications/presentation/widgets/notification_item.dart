@@ -23,12 +23,12 @@ class NotificationItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: notification.isRead 
               ? theme.colorScheme.surface 
-              : theme.colorScheme.primaryContainer.withOpacity(0.3),
+              : theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: notification.isRead 
                 ? theme.colorScheme.outlineVariant 
-                : theme.colorScheme.primary.withOpacity(0.5),
+                : theme.colorScheme.primary.withValues(alpha: 0.5),
           ),
         ),
         child: Row(

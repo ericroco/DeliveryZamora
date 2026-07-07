@@ -53,7 +53,7 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
               color: theme.colorScheme.surface,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))
+                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2))
               ],
             ),
             child: IconButton(
@@ -120,7 +120,7 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                 color: theme.colorScheme.surface,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, -5))
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -5))
                 ],
               ),
               child: Column(
@@ -180,7 +180,7 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))
         ],
       ),
       child: IconButton(

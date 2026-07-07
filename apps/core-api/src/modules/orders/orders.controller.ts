@@ -18,6 +18,7 @@ import { Role } from '@prisma/client';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { UpdateDriverLocationDto } from './dto/update-driver-location.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -72,5 +73,17 @@ export class OrdersController {
     @CurrentUser() user: { id: string; role: Role },
   ) {
     return this.ordersService.updateStatus(id, dto, user);
+  }
+
+  @Patch(':id/location')
+  @UseGuards(RolesGuard)
+  @Roles('DRIVER', 'ADMIN')
+  @ApiOperation({ summary: 'Update driver real-time location for an active order (DRIVER only)' })
+  updateDriverLocation(
+    @Param('id') id: string,
+    @Body() dto: UpdateDriverLocationDto,
+    @CurrentUser() user: { id: string; role: Role },
+  ) {
+    return this.ordersService.updateDriverLocation(id, dto, user);
   }
 }
