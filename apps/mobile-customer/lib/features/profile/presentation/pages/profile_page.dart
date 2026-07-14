@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_customer/core/auth/auth_provider.dart';
+import 'package:mobile_customer/core/auth/domain/user_profile.dart';
 import 'package:mobile_customer/core/constants/app_colors.dart';
 import 'package:mobile_customer/shared/widgets/app_bottom_nav.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).valueOrNull;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
@@ -21,7 +26,7 @@ class ProfilePage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const _ProfileHeader(),
+            _ProfileHeader(user: user),
             const SizedBox(height: 8),
             _MenuSection(
               items: [
@@ -69,7 +74,7 @@ class ProfilePage extends StatelessWidget {
                   icon: Icons.logout,
                   label: 'Cerrar sesión',
                   color: AppColors.primary,
-                  onTap: () => context.go('/login'),
+                  onTap: () => _confirmLogout(context, ref),
                 ),
               ],
             ),
@@ -85,13 +90,82 @@ class ProfilePage extends StatelessWidget {
       bottomNavigationBar: const AppBottomNav(currentIndex: 3),
     );
   }
+
+  /// Shows a confirmation dialog before logging out.
+  /// On confirm: calls AuthNotifier.logout() which clears tokens and sets
+  /// authState to null — then navigates to /login explicitly (the router
+  /// redirect uses ref.read so it doesn't re-run reactively on state changes).
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          '¿Cerrar sesión?',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 17,
+            color: AppColors.text,
+          ),
+        ),
+        content: const Text(
+          'Se cerrará tu sesión en este dispositivo.',
+          style: TextStyle(fontSize: 14, color: AppColors.muted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(
+                color: AppColors.muted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Cerrar sesión',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Clear tokens + set authState = null
+      await ref.read(authStateProvider.notifier).logout();
+      // The router redirect uses ref.read (not ref.watch), so it won't
+      // re-fire automatically. Navigate explicitly instead.
+      if (context.mounted) {
+        context.go('/login');
+      }
+    }
+  }
 }
 
+// ── Profile header ─────────────────────────────────────────────────────────────
+
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader();
+  const _ProfileHeader({required this.user});
+
+  final UserProfile? user;
 
   @override
   Widget build(BuildContext context) {
+    final displayName = user?.name ?? 'Usuario';
+    final displayPhone = user?.phone ?? '';
+    final initial = displayName[0].toUpperCase();
+
     return Container(
       padding: const EdgeInsets.all(20),
       color: AppColors.card,
@@ -104,10 +178,10 @@ class _ProfileHeader extends StatelessWidget {
               color: AppColors.primary,
               shape: BoxShape.circle,
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'E',
-                style: TextStyle(
+                initial,
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
@@ -120,18 +194,18 @@ class _ProfileHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Eric Rodas',
-                  style: TextStyle(
+                Text(
+                  displayName,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                     color: AppColors.text,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '+593 99 999 9999',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                Text(
+                  displayPhone,
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
                 const SizedBox(height: 6),
                 Container(
@@ -163,6 +237,8 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
+// ── Menu section ───────────────────────────────────────────────────────────────
+
 class _MenuSection extends StatelessWidget {
   const _MenuSection({required this.items});
 
@@ -187,6 +263,8 @@ class _MenuSection extends StatelessWidget {
     );
   }
 }
+
+// ── Menu item ──────────────────────────────────────────────────────────────────
 
 class _MenuItem extends StatelessWidget {
   const _MenuItem({

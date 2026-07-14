@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_customer/core/auth/domain/token_pair.dart';
 import 'package:mobile_customer/core/auth/domain/user_profile.dart';
 import 'package:mobile_customer/core/constants/api_constants.dart';
@@ -14,6 +16,32 @@ class AuthRepository {
 
   final Dio _dio;
   final FlutterSecureStorage _storage;
+
+  Future<String?> _readToken(String key) async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(key);
+    }
+    return _storage.read(key: key);
+  }
+
+  Future<void> _writeToken(String key, String value) async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, value);
+    } else {
+      await _storage.write(key: key, value: value);
+    }
+  }
+
+  Future<void> _deleteToken(String key) async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(key);
+    } else {
+      await _storage.delete(key: key);
+    }
+  }
 
   Future<UserProfile> login(String phone, String password) async {
     final res = await _dio.post<Map<String, dynamic>>(
@@ -36,7 +64,7 @@ class AuthRepository {
   }
 
   Future<UserProfile?> restoreSession() async {
-    final access = await _storage.read(key: _kAccessToken);
+    final access = await _readToken(_kAccessToken);
     if (access == null) return null;
     try {
       return await _fetchMe(access);
@@ -49,8 +77,8 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-    final refresh = await _storage.read(key: _kRefreshToken);
-    final access = await _storage.read(key: _kAccessToken);
+    final refresh = await _readToken(_kRefreshToken);
+    final access = await _readToken(_kAccessToken);
     if (refresh != null && access != null) {
       try {
         await _dio.post<void>(
@@ -65,10 +93,10 @@ class AuthRepository {
     await _clearTokens();
   }
 
-  Future<String?> getAccessToken() => _storage.read(key: _kAccessToken);
+  Future<String?> getAccessToken() => _readToken(_kAccessToken);
 
   Future<UserProfile?> _tryRefresh() async {
-    final refresh = await _storage.read(key: _kRefreshToken);
+    final refresh = await _readToken(_kRefreshToken);
     if (refresh == null) return null;
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -94,15 +122,15 @@ class AuthRepository {
 
   Future<void> _saveTokens(TokenPair tokens) async {
     await Future.wait([
-      _storage.write(key: _kAccessToken, value: tokens.accessToken),
-      _storage.write(key: _kRefreshToken, value: tokens.refreshToken),
+      _writeToken(_kAccessToken, tokens.accessToken),
+      _writeToken(_kRefreshToken, tokens.refreshToken),
     ]);
   }
 
   Future<void> _clearTokens() async {
     await Future.wait([
-      _storage.delete(key: _kAccessToken),
-      _storage.delete(key: _kRefreshToken),
+      _deleteToken(_kAccessToken),
+      _deleteToken(_kRefreshToken),
     ]);
   }
 }

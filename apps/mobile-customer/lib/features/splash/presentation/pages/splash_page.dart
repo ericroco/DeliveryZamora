@@ -16,6 +16,17 @@ class _SplashPageState extends ConsumerState<SplashPage>
   late final AnimationController _ctrl;
   late final Animation<double> _fadeAnim;
 
+  void _navigate() {
+    final authState = ref.read(authStateProvider);
+    if (authState.isLoading) return;
+    if (!mounted) return;
+    authState.when(
+      data: (user) => context.go(user != null ? '/' : '/onboarding'),
+      error: (_, __) => context.go('/onboarding'),
+      loading: () {},
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -25,6 +36,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
     );
     _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _ctrl.forward();
+    // If authState is already resolved (e.g. after logout), navigate immediately
+    // on the next frame. The ref.listen below handles the async cold-start case.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _navigate());
   }
 
   @override
@@ -35,6 +49,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    // Listen for async resolution (cold start: restoreSession still in progress).
     ref.listen(authStateProvider, (_, next) {
       if (next.isLoading) return;
       if (!mounted) return;
